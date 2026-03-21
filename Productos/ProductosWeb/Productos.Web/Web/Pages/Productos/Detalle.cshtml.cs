@@ -1,11 +1,15 @@
 using Abstracciones.Interfaces.Reglas;
 using Abstracciones.Modelos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Net;
 using System.Text.Json;
 
 namespace Web.Pages.Productos
 {
+    [Authorize]                                // ★ requiere login
+
     public class DetalleModel : PageModel
     {
         private readonly IConfiguracion _configuracion;
@@ -20,18 +24,35 @@ namespace Web.Pages.Productos
         {
             string endpoint = _configuracion.ObtenerMetodo("ApiEndPoints",
                 "ObtenerProducto");
-            var cliente = new HttpClient();
+            var cliente = ObtenerClienteConToken();
             var solicitud = new HttpRequestMessage(HttpMethod.Get, string.Format(endpoint, id));
 
             var respuesta = await cliente.SendAsync(solicitud);
             respuesta.EnsureSuccessStatusCode();
-            var resultado = await respuesta.Content.ReadAsStringAsync();
-            var opciones = new JsonSerializerOptions
+            if (respuesta.StatusCode == HttpStatusCode.OK)
             {
-                PropertyNameCaseInsensitive = true
-            };
-            producto = JsonSerializer.Deserialize<ProductoResponse>
-                (resultado, opciones);
+                var resultado = await respuesta.Content.ReadAsStringAsync();
+                var opciones = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                producto = JsonSerializer.Deserialize<ProductoResponse>
+                    (resultado, opciones);
+            }
+        }
+
+
+        // ★ Helper — extrae el JWT de los claims y configura el HttpClient
+        private HttpClient ObtenerClienteConToken()
+        {
+            var tokenClaim = HttpContext.User.Claims
+                .FirstOrDefault(c => c.Type == "Token");
+            var cliente = ObtenerClienteConToken();
+            if (tokenClaim != null)
+                cliente.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue(
+                        "Bearer", tokenClaim.Value);
+            return cliente;
         }
     }
 }

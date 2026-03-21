@@ -1,11 +1,14 @@
 using Abstracciones.Interfaces.Reglas;
 using Abstracciones.Modelos;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text.Json;
 
 namespace Web.Pages.Productos
 {
+    [Authorize]                                // ★ requiere login
+
     public class EliminarModel : PageModel
     {
 
@@ -23,7 +26,7 @@ namespace Web.Pages.Productos
                 return NotFound();
             string endpoint = _configuracion.ObtenerMetodo("ApiEndPoints",
                 "ObtenerProducto");
-            var cliente = new HttpClient();
+            var cliente = ObtenerClienteConToken();
             var solicitud = new HttpRequestMessage(HttpMethod.Get, string.Format(endpoint, id));
 
             var respuesta = await cliente.SendAsync(solicitud);
@@ -46,11 +49,24 @@ namespace Web.Pages.Productos
                 return Page();
             string endpoint = _configuracion.ObtenerMetodo("ApiEndPoints",
                 "EliminarProductos");
-            var cliente = new HttpClient();
+            var cliente = ObtenerClienteConToken();
             var solicitud = new HttpRequestMessage(HttpMethod.Delete, string.Format(endpoint, id));
             var respuesta = await cliente.SendAsync(solicitud);
             respuesta.EnsureSuccessStatusCode();
             return RedirectToPage("./Index");
+        }
+
+        // ★ Helper — extrae el JWT de los claims y configura el HttpClient
+        private HttpClient ObtenerClienteConToken()
+        {
+            var tokenClaim = HttpContext.User.Claims
+                .FirstOrDefault(c => c.Type == "Token");
+            var cliente = ObtenerClienteConToken();
+            if (tokenClaim != null)
+                cliente.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue(
+                        "Bearer", tokenClaim.Value);
+            return cliente;
         }
     }
 }

@@ -26,7 +26,14 @@
                             <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
                         </li>
                     </ul>
-                </div>
+
+                    <div class="align-content-end navbar-nav text-uppercase"> 
+                        @await Html.PartialAsync("_AutenticacionParcial")
+                    </div>
+                    <div class="align-content-end " collapse navbar-collapse text-uppercase > 
+
+                    </div>
+
             </div>
         </nav>
     </header>
